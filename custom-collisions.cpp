@@ -77,13 +77,13 @@ class script : callback_base
 
 			// Slope min/max, slant min/max angles.
 			// Required for non-45deg slope sliding
-			c.set_ground_angles(40, 50, 26, 26);
+			c.set_ground_angles(40, 50, 10, 40);
 			// Slant down facing min/max, slant up facing min/max angles
 			// Required or walls > 116deg won't collide
 			c.set_wall_angles(116, 134, 51, 89);
 			// Roof slope min/max, roof slant min/max angles
 			// Required to make the player rotate on ceilings > 154
-			c.set_roof_angles(135, 153, 154, 160);
+			c.set_roof_angles(126, 153, 154, 160);
 
 			dustman@ dm = c.as_dustman();
 
