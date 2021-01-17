@@ -15,6 +15,13 @@ const array<string> SURFACE_TYPES = {
 
 enum SurfaceSide { Ground, Roof, WallLeft, WallRight, }
 
+enum side_types {
+  side_left = 0,
+  side_right = 1,
+  side_roof = 2,
+  side_ground = 3,
+}
+
 // For editing lines
 const float MOUSE_PICK_DIST = 20;
 const array<uint> SIDE_COLOURS = {
@@ -69,10 +76,7 @@ class script : callback_base
 		if(@c != null)
 		{
 			// Set up custom collision handling functions
-			c.set_collision_ground_handler(this, 'collision_ground_handler', 0);
-			c.set_collision_roof_handler(this, 'collision_roof_handler', 0);
-			c.set_collision_wall_left_handler(this, 'collision_wall_left_handler', 0);
-			c.set_collision_wall_right_handler(this, 'collision_wall_right_handler', 0);
+			c.set_collision_handler(this, 'collision_handler', 0);
 			c.set_texture_type_handler(this, 'texture_type_handler', 0);
 
 			// Slope min/max, slant min/max angles.
@@ -336,69 +340,79 @@ class script : callback_base
 		query.result(SURFACE_TYPES[surfaces[collision_index].material_index]);
 	}
 
-	void collision_ground_handler(controllable@ c, tilecollision@ t, int)
+	void collision_handler(controllable@ c, tilecollision@ t, int side, bool moving, float snap_offset, int)
 	{
-		// Small platform at bottom
-		if(c.x() > 96 && c.x() < 288 && c.y() > -48 && c.y() < 5)
+		switch(side)
 		{
-			t.hit(true);
-			t.type(0);
-			t.hit_x(c.x());
-			t.hit_y(-21);
-			return;
-		}
+			case side_ground:
+			{
+				// Small platform at bottom
+				if(c.x() > 96 && c.x() < 288 && c.y() > -48 && c.y() < 5)
+				{
+					t.hit(true);
+					t.type(0);
+					t.hit_x(c.x());
+					t.hit_y(-21);
+					return;
+				}
 
-		c_line.x2 = c.x();
-		c_line.y2 = c.y() + COLLISION_OFFSET;
-		c_line.x1 = c_line.x2;
-		c_line.y1 = c_line.y2 - 48;
-		
-		// Perform the built in tile collision check
-		if(!check_collision_side(SurfaceSide::Ground, t))
-		{
-			c.check_collision_ground(t);
-		}
-	}
-
-	void collision_roof_handler(controllable@ c, tilecollision@ t, int)
-	{
-		c_line.x2 = c.x();
-		c_line.y2 = c.y() - 48;
-		c_line.x1 = c_line.x2;
-		c_line.y1 = c_line.y2 - 48 - COLLISION_OFFSET;
-		
-		// Perform the built in tile collision check
-		if(!check_collision_side(SurfaceSide::Roof, t))
-		{
-			c.check_collision_roof(t);
-		}
-	}
-
-	void collision_wall_left_handler(controllable@ c, tilecollision@ t, int)
-	{
-		c_line.x1 = c.x();
-		c_line.y1 = c.y() - 48;
-		c_line.x2 = c.x() - 24 - COLLISION_OFFSET - t.snap_distance(); // < snap_distance is used when checking for magnet jumps or magnet dashes
-		c_line.y2 = c_line.y1;
-		
-		// Perform the built in tile collision check
-		if(!check_collision_side(SurfaceSide::WallRight, t))
-		{
-			c.check_collision_wall_left(t);
-		}
-	}
-
-	void collision_wall_right_handler(controllable@ c, tilecollision@ t, int)
-	{
-		c_line.x1 = c.x();
-		c_line.y1 = c.y() - 48;
-		c_line.x2 = c.x() + 24 + COLLISION_OFFSET + t.snap_distance(); // < snap_distance is used when checking for magnet jumps or magnet dashes
-		c_line.y2 = c_line.y1;
-		
-		// Perform the built in tile collision check
-		if(!check_collision_side(SurfaceSide::WallLeft, t))
-		{
-			c.check_collision_wall_right(t);
+				c_line.x2 = c.x();
+				c_line.y2 = c.y() + COLLISION_OFFSET + snap_offset;
+				c_line.x1 = c_line.x2;
+				c_line.y1 = c_line.y2 - 48;
+				
+				// Perform the built in tile collision check
+				if(!check_collision_side(SurfaceSide::Ground, t))
+				{
+					c.check_collision(t, side, moving, snap_offset);
+				}
+				
+				break;
+			}
+			case side_roof:
+			{
+				c_line.x2 = c.x();
+				c_line.y2 = c.y() - 48;
+				c_line.x1 = c_line.x2;
+				c_line.y1 = c_line.y2 - 48 - COLLISION_OFFSET - snap_offset;
+				
+				// Perform the built in tile collision check
+				if(!check_collision_side(SurfaceSide::Roof, t))
+				{
+					c.check_collision(t, side, moving, snap_offset);
+				}
+				break;
+			}
+			case side_left:
+			{
+				c_line.x1 = c.x();
+				c_line.y1 = c.y() - 48;
+				c_line.x2 = c.x() - 24 - COLLISION_OFFSET - snap_offset;
+				c_line.y2 = c_line.y1;
+				
+				// Perform the built in tile collision check
+				if(!check_collision_side(SurfaceSide::WallRight, t))
+				{
+					c.check_collision(t, side, moving, snap_offset);
+				}
+				
+				break;
+			}
+			case side_right:
+			{
+				c_line.x1 = c.x();
+				c_line.y1 = c.y() - 48;
+				c_line.x2 = c.x() + 24 + COLLISION_OFFSET + snap_offset;
+				c_line.y2 = c_line.y1;
+				
+				// Perform the built in tile collision check
+				if(!check_collision_side(SurfaceSide::WallLeft, t))
+				{
+					c.check_collision(t, side, moving, snap_offset);
+				}
+				
+				break;
+			}
 		}
 	}
 	
